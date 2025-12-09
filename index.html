@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>俄羅斯方塊</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+
+        :root {
+            --bg-color: #1a1a2e;
+            --main-card-color: #2c2c54;
+            --score-card-color: #474787;
+            --text-color: #ffffff;
+            --accent-color: #ff6b6b;
+            --shadow-light: 0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
+            --shadow-deep: 0 10px 20px rgba(0, 0, 0, 0.2), 0 6px 6px rgba(0, 0, 0, 0.15);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            max-width: 1200px;
+            width: 100%;
+            justify-content: center;
+        }
+
+        .game-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            padding: 20px;
+            background-color: var(--main-card-color);
+            border-radius: 12px;
+            box-shadow: var(--shadow-deep);
+            flex-grow: 1;
+            min-width: 300px;
+            max-width: 400px;
+        }
+
+        h1 {
+            color: var(--accent-color);
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 0 0 5px rgba(255, 107, 107, 0.5);
+        }
+
+        canvas {
+            border: 4px solid var(--score-card-color);
+            background-color: #000000;
+            border-radius: 8px;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+            width: 100%; /* Make it responsive within the game-area */
+            height: auto; /* Maintain aspect ratio */
+            max-width: 300px; /* Base size for 10x20 grid (30px cell) */
+            aspect-ratio: 1 / 2;
+        }
+
+        .info-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            flex-grow: 1;
+            min-width: 200px;
+            max-width: 300px;
+        }
+
+        .score-card, .highscores-card {
+            background-color: var(--score-card-color);
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: var(--shadow-deep);
+        }
+
+        .score-item, .next-piece-display {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        .score-label {
+            color: var(--accent-color);
+        }
+
+        .next-piece-container {
+            text-align: center;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .next-piece-canvas {
+            background-color: #000000;
+            border: 2px solid var(--accent-color);
+            border-radius: 6px;
+            margin-top: 10px;
+        }
+
+        button {
+            background-color: var(--accent-color);
+            color: var(--text-color);
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 1.2rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s, box-shadow 0.2s;
+            box-shadow: var(--shadow-light);
+            width: 100%;
+            margin-top: 15px;
+        }
+
+        button:hover {
+            background-color: #ff4757;
+            box-shadow: 0 6px 10px rgba(255, 107, 107, 0.3);
+        }
+
+        button:active {
+            transform: translateY(1px);
+        }
+
+        .game-over-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            z-index: 100;
+            border: 3px solid var(--accent-color);
+            box-shadow: 0 0 20px var(--accent-color);
+            display: none; /* Controlled by JS */
+        }
+
+        .game-over-message h2 {
+            color: var(--accent-color);
+            font-size: 3rem;
+            margin-bottom: 10px;
+        }
+
+        .game-over-message p {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+        }
+
+        .highscores-list {
+            list-style: none;
+            padding: 0;
+            margin-top: 10px;
+        }
+
+        .highscore-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
+            font-size: 1rem;
+        }
+
+        .highscore-item:last-child {
+            border-bottom: none;
+        }
+
+        .user-id-text {
+            font-size: 0.8rem;
+            opacity: 0.7;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+                align-items: center;
+            }
+            .game-area, .info-panel {
+                width: 90%;
+                max-width: none;
+            }
+            canvas {
+                max-width: 90vw;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="game-area">
+            <h1>俄羅斯方塊</h1>
+            <canvas id="tetrisCanvas" width="300" height="600"></canvas>
+            <button id="startButton">開始遊戲</button>
+            <div id="userIdDisplay" class="user-id-text">使用者 ID: 載入中...</div>
+
+            <!-- Game Over Message -->
+            <div id="gameOverMessage" class="game-over-message">
+                <h2>遊戲結束!</h2>
+                <p id="finalScore"></p>
+                <button id="restartButton">重新開始</button>
+            </div>
+        </div>
+
+        <div class="info-panel">
+            <div class="score-card">
+                <h2>分數</h2>
+                <div class="score-item">
+                    <span class="score-label">分數:</span>
+                    <span id="score">0</span>
+                </div>
+                <div class="score-item">
+                    <span class="score-label">行數:</span>
+                    <span id="lines">0</span>
+                </div>
+                <div class="score-item">
+                    <span class="score-label">等級:</span>
+                    <span id="level">1</span>
+                </div>
+                <div class="next-piece-container">
+                    <div class="score-label">下一塊:</div>
+                    <canvas id="nextPieceCanvas" class="next-piece-canvas" width="120" height="120"></canvas>
+                </div>
+            </div>
+
+            <div class="highscores-card">
+                <h2>最高分數 (即時)</h2>
+                <ul id="highscoresList" class="highscores-list">
+                    <!-- High scores will be inserted here by JS -->
+                    <li class="highscore-item"><span>載入中...</span></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Firebase 導入
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, addDoc, onSnapshot, collection, query, orderBy, limit, serverTimestamp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Firebase Setup and Global Variables
+        setLogLevel('Debug');
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-tetris-app-id';
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        let app, db, auth, userId = null;
+
+        // --- Game Constants ---
+        const COLS = 10;
+        const ROWS = 20;
+        const BLOCK_SIZE = 30; // 300px width / 10 cols
+        const CANVAS_WIDTH = COLS * BLOCK_SIZE;
+        const CANVAS_HEIGHT = ROWS * BLOCK_SIZE;
+
+        const canvas = document.getElementById('tetrisCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = CANVAS_WIDTH;
+        canvas.height = CANVAS_HEIGHT;
+
+        const nextCanvas = document.getElementById('nextPieceCanvas');
+        const nextCtx = nextCanvas.getContext('2d');
+        const NEXT_SIZE = 4;
+        nextCanvas.width = NEXT_SIZE * BLOCK_SIZE * 0.8;
+        nextCanvas.height = NEXT_SIZE * BLOCK_SIZE * 0.8;
+
+        const scoreElement = document.getElementById('score');
+        const linesElement = document.getElementById('lines');
+        const levelElement = document.getElementById('level');
+        const startButton = document.getElementById('startButton');
+        const gameOverMessage = document.getElementById('gameOverMessage');
+        const finalScoreElement = document.getElementById('finalScore');
+        const restartButton = document.getElementById('restartButton');
+        const highscoresList = document.getElementById('highscoresList');
+        const userIdDisplay = document.getElementById('userIdDisplay');
+
+        // Tetromino shapes and colors
+        const SHAPES = [
+            [[0, 0, 0, 0], [1, 1, 1, 1], [0, 0, 0, 0], [0, 0, 0, 0]], // I
+            [[2, 0, 0], [2, 2, 2], [0, 0, 0]], // J
+            [[0, 0, 3], [3, 3, 3], [0, 0, 0]], // L
+            [[4, 4], [4, 4]], // O
+            [[0, 5, 5], [5, 5, 0], [0, 0, 0]], // S
+            [[0, 6, 0], [6, 6, 6], [0, 0, 0]], // T
+            [[7, 7, 0], [0, 7, 7], [0, 0, 0]], // Z
+        ];
+
+        const COLORS = [
+            '#000000', // Empty
+            '#00ffff', // I - Cyan
+            '#0000ff', // J - Blue
+            '#ffaa00', // L - Orange
+            '#ffff00', // O - Yellow
+            '#00ff00', // S - Green
+            '#aa00ff', // T - Purple
+            '#ff0000', // Z - Red
+        ];
+
+        // --- Game State ---
+        let board;
+        let currentPiece;
+        let nextPiece;
+        let score = 0;
+        let lines = 0;
+        let level = 1;
+        let isPlaying = false;
+        let dropCounter = 0;
+        let dropInterval = 1000; // milliseconds
+        let lastTime = 0;
+        let highScores = [];
+
+        // --- Firebase Functions ---
+
+        /**
+         * 初始化 Firebase 並設置認證。
+         */
+        async function initializeFirebase() {
+            if (!firebaseConfig || Object.keys(firebaseConfig).length === 0) {
+                 console.error("Firebase config is missing or empty. High scores will not be saved.");
+                 userIdDisplay.textContent = "使用者 ID: 離線模式";
+                 return;
+            }
+
+            try {
+                app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+
+                await new Promise(resolve => {
+                    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+                        if (user) {
+                            userId = user.uid;
+                            userIdDisplay.textContent = `使用者 ID: ${userId.substring(0, 8)}...`;
+                        } else {
+                            if (initialAuthToken) {
+                                await signInWithCustomToken(auth, initialAuthToken);
+                            } else {
+                                // If no custom token, sign in anonymously
+                                await signInAnonymously(auth);
+                            }
+                        }
+                        // Ensure we only resolve once auth is stable
+                        if (auth.currentUser) {
+                            unsubscribe();
+                            resolve();
+                        }
+                    });
+                });
+
+                // Once authenticated, start listening for high scores
+                if (db) {
+                    listenForHighScores();
+                }
+
+            } catch (error) {
+                console.error("Firebase initialization failed:", error);
+                userIdDisplay.textContent = "使用者 ID: 認證失敗";
+            }
+        }
+
+        /**
+         * 監聽高分榜的即時更新。
+         */
+        function listenForHighScores() {
+            if (!db) return;
+
+            const highscoresCollection = collection(db, `/artifacts/${appId}/public/data/tetris_highscores`);
+            const q = query(highscoresCollection, orderBy('score', 'desc'), limit(10));
+
+            onSnapshot(q, (snapshot) => {
+                highScores = [];
+                snapshot.forEach((doc) => {
+                    highScores.push({ id: doc.id, ...doc.data() });
+                });
+                renderHighScores();
+            }, (error) => {
+                console.error("Error listening to high scores:", error);
+                highscoresList.innerHTML = '<li class="highscore-item"><span>載入高分榜失敗</span></li>';
+            });
+        }
+
+        /**
+         * 提交當前分數作為最高分。
+         */
+        async function submitHighScore(finalScore) {
+            if (!db || !userId) return;
+
+            try {
+                const highscoresCollection = collection(db, `/artifacts/${appId}/public/data/tetris_highscores`);
+                await addDoc(highscoresCollection, {
+                    userId: userId,
+                    score: finalScore,
+                    timestamp: serverTimestamp()
+                });
+                console.log("High score submitted successfully.");
+            } catch (error) {
+                console.error("Error submitting high score:", error);
+            }
+        }
+
+        /**
+         * 渲染高分榜到 UI。
+         */
+        function renderHighScores() {
+            highscoresList.innerHTML = highScores.length === 0
+                ? '<li class="highscore-item"><span>尚無紀錄</span></li>'
+                : highScores.map((item, index) => {
+                    const isCurrentUser = item.userId === userId;
+                    const style = isCurrentUser ? 'color: var(--accent-color); font-weight: bold;' : '';
+                    return `
+                        <li class="highscore-item" style="${style}">
+                            <span>${index + 1}. ${item.score}</span>
+                            <span style="font-size: 0.8rem; opacity: 0.8;">
+                                ${isCurrentUser ? '(你)' : item.userId.substring(0, 8) + '...'}
+                            </span>
+                        </li>
+                    `;
+                }).join('');
+        }
+
+        // --- Game Core Functions ---
+
+        /**
+         * 創建一個空的遊戲面板。
+         */
+        function createBoard(w, h) {
+            const matrix = [];
+            while (h--) {
+                matrix.push(new Array(w).fill(0));
+            }
+            return matrix;
+        }
+
+        /**
+         * 隨機生成一個新的俄羅斯方塊。
+         */
+        function createPiece() {
+            const rand = Math.floor(Math.random() * SHAPES.length);
+            const piece = SHAPES[rand];
+            return {
+                matrix: piece,
+                pos: { x: Math.floor(COLS / 2) - Math.floor(piece[0].length / 2), y: 0 },
+                color: rand + 1, // Index 0 is empty color
+            };
+        }
+
+        /**
+         * 繪製一個方塊。
+         */
+        function drawBlock(context, x, y, colorIndex, scale = 1) {
+            if (colorIndex === 0) return;
+            context.fillStyle = COLORS[colorIndex];
+            context.strokeStyle = '#000000'; // Block separator
+            const size = BLOCK_SIZE * scale;
+            const xPos = x * size;
+            const yPos = y * size;
+
+            context.fillRect(xPos, yPos, size, size);
+            context.strokeStyle = COLORS[colorIndex];
+            context.lineWidth = 3 * scale;
+            context.strokeRect(xPos + 1 * scale, yPos + 1 * scale, size - 2 * scale, size - 2 * scale);
+
+            // Add inner light effect for better look
+            context.fillStyle = 'rgba(255, 255, 255, 0.2)';
+            context.fillRect(xPos + 2 * scale, yPos + 2 * scale, size - 4 * scale, 4 * scale);
+        }
+
+        /**
+         * 繪製遊戲面板和當前方塊。
+         */
+        function draw() {
+            // Clear main canvas (dark grey background for the board)
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+            // Draw stacked blocks
+            drawMatrix(ctx, board, { x: 0, y: 0 });
+
+            // Draw current piece
+            if (currentPiece) {
+                drawMatrix(ctx, currentPiece.matrix, currentPiece.pos);
+            }
+        }
+
+        /**
+         * 繪製矩陣 (Board 或 Piece)。
+         */
+        function drawMatrix(context, matrix, offset, scale = 1) {
+            matrix.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value !== 0) {
+                        drawBlock(context, x + offset.x, y + offset.y, value, scale);
+                    }
+                });
+            });
+        }
+
+        /**
+         * 繪製下一個方塊。
+         */
+        function drawNextPiece() {
+            nextCtx.fillStyle = '#000000';
+            nextCtx.fillRect(0, 0, nextCanvas.width, nextCanvas.height);
+
+            if (nextPiece) {
+                const matrix = nextPiece.matrix;
+                const size = matrix.length;
+                const cellScale = nextCanvas.width / (NEXT_SIZE * BLOCK_SIZE);
+                const offset = (NEXT_SIZE - size) / 2;
+
+                drawMatrix(nextCtx, matrix, { x: offset, y: offset }, cellScale);
+            }
+        }
+
+        /**
+         * 檢查碰撞。
+         */
+        function collide(boardMatrix, piece) {
+            const [m, o] = [piece.matrix, piece.pos];
+            for (let y = 0; y < m.length; ++y) {
+                for (let x = 0; x < m[y].length; ++x) {
+                    if (m[y][x] !== 0 &&
+                        (boardMatrix[y + o.y] && boardMatrix[y + o.y][x + o.x]) !== 0) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        /**
+         * 合併方塊到面板。
+         */
+        function merge(boardMatrix, piece) {
+            piece.matrix.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value !== 0) {
+                        boardMatrix[y + piece.pos.y][x + piece.pos.x] = value;
+                    }
+                });
+            });
+        }
+
+        /**
+         * 旋轉方塊。
+         */
+        function rotate(matrix, dir) {
+            // Transpose
+            for (let y = 0; y < matrix.length; ++y) {
+                for (let x = 0; x < y; ++x) {
+                    [matrix[x][y], matrix[y][x]] = [matrix[y][x], matrix[x][y]];
+                }
+            }
+
+            // Reverse rows based on direction
+            if (dir > 0) {
+                matrix.forEach(row => row.reverse());
+            } else {
+                matrix.reverse();
+            }
+        }
+
+        /**
+         * 處理旋轉時的牆壁踢。
+         */
+        function playerRotate(dir) {
+            if (!isPlaying || !currentPiece) return;
+            const pos = currentPiece.pos.x;
+            let offset = 1;
+            rotate(currentPiece.matrix, dir);
+            while (collide(board, currentPiece)) {
+                currentPiece.pos.x += offset;
+                offset = -(offset + (offset > 0 ? 1 : -1));
+                if (offset > currentPiece.matrix[0].length) {
+                    rotate(currentPiece.matrix, -dir); // Revert rotation
+                    currentPiece.pos.x = pos;
+                    return;
+                }
+            }
+        }
+
+        /**
+         * 方塊下落。
+         */
+        function playerDrop() {
+            if (!isPlaying || !currentPiece) return;
+            currentPiece.pos.y++;
+            if (collide(board, currentPiece)) {
+                currentPiece.pos.y--;
+                merge(board, currentPiece);
+                sweepBoard();
+                playerReset();
+            }
+            dropCounter = 0;
+        }
+
+        /**
+         * 快速下落 (Hard Drop)。
+         */
+        function playerHardDrop() {
+            if (!isPlaying || !currentPiece) return;
+            let distance = 0;
+            while (!collide(board, currentPiece)) {
+                currentPiece.pos.y++;
+                distance++;
+            }
+            currentPiece.pos.y--;
+            distance--;
+
+            // Score bonus for hard drop (optional)
+            score += distance * 2;
+            updateScore();
+
+            merge(board, currentPiece);
+            sweepBoard();
+            playerReset();
+        }
+
+        /**
+         * 方塊左右移動。
+         */
+        function playerMove(dir) {
+            if (!isPlaying || !currentPiece) return;
+            currentPiece.pos.x += dir;
+            if (collide(board, currentPiece)) {
+                currentPiece.pos.x -= dir;
+            }
+        }
+
+        /**
+         * 處理方塊鎖定和生成新方塊。
+         */
+        function playerReset() {
+            // Move next piece to current piece
+            currentPiece = nextPiece;
+            nextPiece = createPiece();
+            drawNextPiece();
+
+            // Check for game over
+            if (collide(board, currentPiece)) {
+                gameOver();
+            }
+        }
+
+        /**
+         * 掃描面板並清除滿行。
+         */
+        function sweepBoard() {
+            let rowCount = 0;
+            outer: for (let y = board.length - 1; y > 0; --y) {
+                for (let x = 0; x < board[y].length; ++x) {
+                    if (board[y][x] === 0) {
+                        continue outer;
+                    }
+                }
+
+                // If a full row is found:
+                const row = board.splice(y, 1)[0].fill(0);
+                board.unshift(row);
+                y++;
+                rowCount++;
+            }
+
+            if (rowCount > 0) {
+                // Scoring system (Standard: 100, 300, 500, 800)
+                const scoreTable = [0, 100, 300, 500, 800];
+                score += scoreTable[rowCount] * level;
+                lines += rowCount;
+
+                // Level up every 10 lines
+                if (Math.floor(lines / 10) + 1 > level) {
+                    level = Math.floor(lines / 10) + 1;
+                    dropInterval = Math.max(100, 1000 - (level - 1) * 75);
+                }
+
+                updateScore();
+            }
+        }
+
+        /**
+         * 更新分數顯示。
+         */
+        function updateScore() {
+            scoreElement.innerText = score.toLocaleString();
+            linesElement.innerText = lines;
+            levelElement.innerText = level;
+        }
+
+        /**
+         * 遊戲循環 (Animation Loop)。
+         */
+        function update(time = 0) {
+            if (!isPlaying) return;
+
+            const deltaTime = time - lastTime;
+            lastTime = time;
+
+            dropCounter += deltaTime;
+            if (dropCounter > dropInterval) {
+                playerDrop();
+            }
+
+            draw();
+            requestAnimationFrame(update);
+        }
+
+        /**
+         * 遊戲結束。
+         */
+        function gameOver() {
+            isPlaying = false;
+            startButton.style.display = 'block';
+            startButton.innerText = '重新開始';
+            gameOverMessage.style.display = 'block';
+            finalScoreElement.innerText = `最終分數: ${score.toLocaleString()}`;
+
+            // Submit high score to Firestore
+            submitHighScore(score);
+        }
+
+        /**
+         * 初始化遊戲狀態。
+         */
+        function initGame() {
+            board = createBoard(COLS, ROWS);
+            score = 0;
+            lines = 0;
+            level = 1;
+            dropInterval = 1000;
+            updateScore();
+
+            // Setup initial pieces
+            currentPiece = createPiece();
+            nextPiece = createPiece();
+            playerReset(); // This ensures nextPiece is assigned correctly and a new one is generated
+            drawNextPiece();
+        }
+
+        /**
+         * 啟動遊戲。
+         */
+        function startGame() {
+            initGame();
+            isPlaying = true;
+            gameOverMessage.style.display = 'none';
+            startButton.style.display = 'none';
+            lastTime = 0;
+            requestAnimationFrame(update);
+        }
+
+        // --- Event Listeners ---
+
+        document.addEventListener('keydown', event => {
+            if (!isPlaying || !currentPiece) return;
+
+            switch (event.key) {
+                case 'ArrowLeft':
+                case 'a':
+                    playerMove(-1);
+                    break;
+                case 'ArrowRight':
+                case 'd':
+                    playerMove(1);
+                    break;
+                case 'ArrowDown':
+                case 's':
+                    playerDrop();
+                    break;
+                case 'ArrowUp':
+                case 'w':
+                    playerRotate(1);
+                    break;
+                case ' ': // Spacebar for hard drop
+                    event.preventDefault(); // Prevent page scroll
+                    playerHardDrop();
+                    break;
+            }
+        });
+
+        startButton.addEventListener('click', startGame);
+        restartButton.addEventListener('click', startGame);
+
+        // 初始化 Firebase 和遊戲
+        window.onload = () => {
+            initializeFirebase().then(() => {
+                // If Firebase is initialized, the high score listener is running
+                // We can safely start the game structure drawing
+                draw();
+                // Check if current piece needs initial spawn if not started
+                if (!currentPiece) {
+                    initGame();
+                }
+            });
+        };
+    </script>
+</body>
+</html>
